@@ -2,7 +2,14 @@ Hash Table
 ----------
 
 Author: Charlie FG, carrotsrc.org
-Version: 0.1
+Version: 0.2
 Modified: 2014/05/30
 
 This is a basic hash table unit and set of functions for working with table.
+
+
+Changelog
+---------
+- Fixed problem of btbucket_td not being in header file
+- Typedef names do not use reserved POSIX naming conventions
+
