@@ -17,12 +17,13 @@
 #define HASH_TABLE_H_
 
 /* structure for describing the hash table */
-typedef struct hashtable_stc hashtable_t;
+typedef struct ht_bucket_stc htbucket_td; /* this is required for structure */
+typedef struct hashtable_stc hashtable_td;
 
 struct hashtable_stc {
 	int size;
 	int total;
-	htbucket_t *buckets;
+	htbucket_td *buckets;
 
 	/* these are the callback functions for different
 	 * data handling.
@@ -38,17 +39,17 @@ struct hashtable_stc {
 unsigned int hash_string(void *str);
 
 /* generate a new hash table */
-hashtable_t *gen_hashtable(	int size, 
+hashtable_td *gen_hashtable(	int size, 
 				unsigned int(*)(void*),
 				void*(*)(void*, void*),
 				int(*)(void*, void*, size_t),
 				void*(*)(void*));
 
-void free_hashtable(hashtable_t *table);
+void free_hashtable(hashtable_td *table);
 
-void *hashtable_add(void *value, size_t size, hashtable_t *table); /* add an item to the hash table */
+void *hashtable_add(void *value, size_t size, hashtable_td *table); /* add an item to the hash table */
 
-void *hashtable_get_value(void *, size_t, hashtable_t *); /* get an value store */
-void *hashtable_get_store(void *, size_t, hashtable_t *); /* get a value */
+void *hashtable_get_value(void *, size_t, hashtable_td *); /* get an value store */
+void *hashtable_get_store(void *, size_t, hashtable_td *); /* get a value */
 
 #endif

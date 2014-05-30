@@ -18,27 +18,27 @@
 #include <string.h>
 #include "hash_table.h"
 
-typedef struct ht_list_stc htitem_t;
+typedef struct ht_list_stc htitem_td;
 struct ht_list_stc {
 	char *value;		// the value that is hashed
 	void *store;		// pointer to data that is indexed
-	htitem_t *p;	// the previous list item
-	htitem_t *n;	// the next list item
+	htitem_td *p;	// the previous list item
+	htitem_td *n;	// the next list item
 };
 
-typedef struct ht_bucket_stc htbucket_t;
+
 struct ht_bucket_stc {
 	short occupied;
-	htitem_t *content;
+	htitem_td *content;
 };
 
-htitem_t *hashitem_get(htitem_t *, void *, size_t, int(*)(void*, void*, size_t));
-htitem_t *hashitem_append(htitem_t *list, void *value, size_t size);
-void *ht_add_val(unsigned int, void *, size_t, hashtable_t *, void*(*)(void*));
+htitem_td *hashitem_get(htitem_td *, void *, size_t, int(*)(void*, void*, size_t));
+htitem_td *hashitem_append(htitem_td *list, void *value, size_t size);
+void *ht_add_val(unsigned int, void *, size_t, hashtable_td *, void*(*)(void*));
 
-void *ht_get_val(unsigned int, void *, size_t, hashtable_t *);
-void *ht_get_store(unsigned int, void *, size_t, hashtable_t *);
-void *ht_get_item(unsigned int, void *, size_t, hashtable_t *);
+void *ht_get_val(unsigned int, void *, size_t, hashtable_td *);
+void *ht_get_store(unsigned int, void *, size_t, hashtable_td *);
+void *ht_get_item(unsigned int, void *, size_t, hashtable_td *);
 
 /* simple hash generation function for string
  */
@@ -66,7 +66,7 @@ int compare_string(void *value, void *str, size_t size)
 
 /* retrieve an item from a bucket's list
  */
-htitem_t *hashitem_get(htitem_t *list, void *value, size_t size, int(cmpf)(void*, void*, size_t))
+htitem_td *hashitem_get(htitem_td *list, void *value, size_t size, int(cmpf)(void*, void*, size_t))
 {
 	while(list->n != NULL) {
 		if(cmpf(list->value, value, size) == 0)
@@ -83,12 +83,12 @@ htitem_t *hashitem_get(htitem_t *list, void *value, size_t size, int(cmpf)(void*
 
 /* append an item to the end of a bucket's list
  */
-htitem_t *hashitem_append(htitem_t *list, void *value, size_t size)
+htitem_td *hashitem_append(htitem_td *list, void *value, size_t size)
 {
 	while(list->n != NULL)
 		list = list->n;
 
-	htitem_t *item = malloc(sizeof(htitem_t));
+	htitem_td *item = malloc(sizeof(htitem_td));
 	item->value = malloc(size);
 	memcpy(item->value, value, size);
 	item->store = NULL;
@@ -100,12 +100,12 @@ htitem_t *hashitem_append(htitem_t *list, void *value, size_t size)
 
 /* generate a blank hash table of size specified. include the type functions
  */
-hashtable_t *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef)(void*, void*), int(*cmpf)(void*, void*, size_t),void*(*freef)(void*))
+hashtable_td *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef)(void*, void*), int(*cmpf)(void*, void*, size_t),void*(*freef)(void*))
 {
-	hashtable_t *ht = malloc(sizeof(hashtable_t));
+	hashtable_td *ht = malloc(sizeof(hashtable_td));
 	ht->size = size;
 	ht->total = 0;
-	ht->buckets = calloc(size, sizeof(htbucket_t));
+	ht->buckets = calloc(size, sizeof(htbucket_td));
 	if(hashf == NULL)
 		hashf = &hash_string;
 	ht->hashf = hashf;
@@ -121,14 +121,14 @@ hashtable_t *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef)
 /* properly free the memory allocated for the hash table
  * including all the bucket lists and their values
  */
-void free_hashtable(hashtable_t *table)
+void free_hashtable(hashtable_td *table)
 {
 	int sz = table->size;
 	for(int i = 0; i < sz; i++) {
 		if(table->buckets[i].occupied == 0x0)
 			continue;
 
-		htitem_t *item = table->buckets[i].content;
+		htitem_td *item = table->buckets[i].content;
 		while(item->n != NULL) {
 			free(item->value);
 			if(table->freef != NULL)
@@ -153,15 +153,15 @@ void free_hashtable(hashtable_t *table)
  * to organise the data that the indexed item will be storing, which is
  * handed over to the *store field in the item's data structure
  */
-void *hashtable_add(void *value, size_t size, hashtable_t *table)
+void *hashtable_add(void *value, size_t size, hashtable_td *table)
 {
 	unsigned int hash = table->hashf(value);
 	unsigned int index = hash%(table->size);
-	htitem_t *item = NULL;
+	htitem_td *item = NULL;
 
 	if(table->buckets[index].occupied == 0x0) {
 		/* the index is a clear bucket */
-		item = malloc(sizeof(htitem_t));
+		item = malloc(sizeof(htitem_td));
 		item->value = malloc(size);
 		memcpy(item->value, value, size);
 		if(table->storef != NULL)
@@ -188,10 +188,10 @@ void *hashtable_add(void *value, size_t size, hashtable_t *table)
 /* get a value's store from the hash table. If it exists then return
  * a pointer to the item otherwise return NULL
  */
-void *hashtable_get_store(void *value, size_t size, hashtable_t *table)
+void *hashtable_get_store(void *value, size_t size, hashtable_td *table)
 {
 	unsigned int hash = table->hashf(value);
-	htitem_t *item = NULL;
+	htitem_td *item = NULL;
 
 	if((item = ht_get_item(hash, value, size, table)) == NULL)
 		return NULL;
@@ -202,10 +202,10 @@ void *hashtable_get_store(void *value, size_t size, hashtable_t *table)
 /* get a value from the hash table. If it exists then return
  * a pointer to the value otherwise return NULL
  */
-void *hashtable_get_value(void *value, size_t size, hashtable_t *table)
+void *hashtable_get_value(void *value, size_t size, hashtable_td *table)
 {
 	unsigned int hash = table->hashf(value);
-	htitem_t *item = NULL;
+	htitem_td *item = NULL;
 
 	if((item = ht_get_item(hash, value, size, table)) == NULL)
 		return NULL;
@@ -214,10 +214,10 @@ void *hashtable_get_value(void *value, size_t size, hashtable_t *table)
 }
 
 /* local scope function for retrieving an item */
-void *ht_get_item(unsigned int hash, void *value, size_t size, hashtable_t *table)
+void *ht_get_item(unsigned int hash, void *value, size_t size, hashtable_td *table)
 {
 	unsigned int index = hash%(table->size);
-	htitem_t *item = NULL;
+	htitem_td *item = NULL;
 	if(table->buckets[index].occupied == 0x0)
 		return NULL;
 	
