@@ -20,7 +20,7 @@
 
 typedef struct ht_list_stc htitem_td;
 struct ht_list_stc {
-	char *value;		// the value that is hashed
+	void *value;		// the item that is hashed
 	void *store;		// pointer to data that is indexed
 	htitem_td *p;	// the previous list item
 	htitem_td *n;	// the next list item
@@ -30,6 +30,13 @@ struct ht_list_stc {
 struct ht_bucket_stc {
 	short occupied;
 	htitem_td *content;
+};
+
+struct ht_iterator_stc {
+	hashtable_td *table;
+	unsigned int b;
+	htitem_td *i;
+	htitem_td *p;
 };
 
 htitem_td *hashitem_get(htitem_td *, void *, size_t, int(*)(void*, void*, size_t));
@@ -225,4 +232,115 @@ void *ht_get_item(unsigned int hash, void *value, size_t size, hashtable_td *tab
 		return NULL;
 	
 	return item;
+}
+
+/* create a new iterator */
+htiterator_td *hashtable_iter(hashtable_td *table)
+{
+	htiterator_td *iter = malloc(sizeof(htiterator_td));
+	iter->table = table;
+	iter->b = 0;
+	iter->i = NULL;
+	iter->p = NULL;
+
+	/* roll it forward */
+	while(iter->table->buckets[iter->b].occupied == 0x0)
+		iter->b++;
+	
+	/* roll it back one so the next() functions work
+	 * with minimal checks
+	 */
+	iter->b--;
+}
+
+/* get next store from iterator
+ *
+ * this will set the current iterator item automatically
+ * to the next one which is why ->p is used for reference
+ */
+void *hashiter_next_store(htiterator_td *iter)
+{
+	void *store = NULL;
+	if(iter->i == NULL) {
+		iter->b++;
+		while(iter->table->buckets[iter->b].occupied == 0x0) {
+			iter->b++;
+			if(iter->b == iter->table->size)
+				return NULL;
+		}
+
+		iter->i = iter->table->buckets[iter->b].content;
+	}
+
+	store = iter->i->store;
+	iter->p = iter->i;	/* so we can just quickly roll back */
+	iter->i = iter->i->n;
+
+	return store;
+}
+
+/* get the current store value from iterator
+ * 
+ * This uses the pointer to the previous item because
+ * the next() has already moved onto the next item
+ */
+void *hashiter_current_store(htiterator_td *iter)
+{
+	if(iter->p == NULL)
+		return NULL;
+
+	return iter->p->store;
+}
+
+/* get next value from iterator 
+ *
+ * Same as store function
+ */
+void *hashiter_next_value(htiterator_td *iter)
+{
+	void *value = NULL;
+	if(iter->i == NULL) {
+		iter->b++;
+		while(iter->table->buckets[iter->b].occupied == 0x0) {
+			iter->b++;
+			if(iter->b == iter->table->size)
+				return NULL;
+		}
+
+		iter->i = iter->table->buckets[iter->b].content;
+	}
+
+	value = iter->i->value;
+	iter->p = iter->i;	/* so we can just quickly roll back */
+	iter->i = iter->i->n;
+
+	return value;
+}
+
+/* get the current value from the iterator */
+void *hashiter_current_value(htiterator_td *iter)
+{
+	if(iter->p == NULL)
+		return NULL;
+
+	/* the next() function has already rolled onto the next
+	 * item, so use ->p instead which is reference to previous
+	 */
+	return iter->p->value;
+}
+
+void hashiter_rewind(htiterator_td *iter)
+{
+	iter->b = 0;
+	iter->p = NULL;
+	iter->i = NULL;
+
+	/* roll it forward */
+	while(iter->table->buckets[iter->b].occupied == 0x0)
+		iter->b++;
+	
+	/* roll it back one so the next() functions work
+	 * with minimal checks
+	 */
+	iter->b--;
 }

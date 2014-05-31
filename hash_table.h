@@ -16,6 +16,7 @@
 #ifndef HASH_TABLE_H_
 #define HASH_TABLE_H_
 
+typedef struct ht_iterator_stc htiterator_td; /* an interator type for the hash table */
 /* structure for describing the hash table */
 typedef struct ht_bucket_stc htbucket_td; /* this is required for structure */
 typedef struct hashtable_stc hashtable_td;
@@ -51,5 +52,15 @@ void *hashtable_add(void *value, size_t size, hashtable_td *table); /* add an it
 
 void *hashtable_get_value(void *, size_t, hashtable_td *); /* get an value store */
 void *hashtable_get_store(void *, size_t, hashtable_td *); /* get a value */
+
+htiterator_td *hashtable_iter(hashtable_td *table);
+
+void *hashiter_next_store(htiterator_td *iter);
+void *hashiter_current_store(htiterator_td *iter);
+
+void *hashiter_next_value(htiterator_td *iter);
+void *hashiter_current_value(htiterator_td *iter);
+
+void hashiter_rewind(htiterator_td *iter);
 
 #endif
