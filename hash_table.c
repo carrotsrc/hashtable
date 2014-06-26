@@ -107,7 +107,7 @@ htitem_td *hashitem_append(htitem_td *list, void *value, size_t size)
 
 /* generate a blank hash table of size specified. include the type functions
  */
-hashtable_td *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef)(void*, void*), int(*cmpf)(void*, void*, size_t),void*(*freef)(void*))
+hashtable_td *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef)(void*, void*), int(*cmpf)(void*, void*, size_t),void*(*freef)(void*,void*))
 {
 	hashtable_td *ht = malloc(sizeof(hashtable_td));
 	ht->size = size;
@@ -131,27 +131,42 @@ hashtable_td *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef
 void free_hashtable(hashtable_td *table)
 {
 	int sz = table->size;
+
 	for(int i = 0; i < sz; i++) {
 		if(table->buckets[i].occupied == 0x0)
 			continue;
 
 		htitem_td *item = table->buckets[i].content;
 		while(item->n != NULL) {
-			free(item->value);
 			if(table->freef != NULL)
-				table->freef(item->store);
+				table->freef(item->value, item->store);
+			else
+				free(item->value);
+
 			item = item->n;
 			free(item->p);
 		}
 
-		free(item->value);
+		if(table->freef != NULL)
+			table->freef(item->value, item->store);
+		else
+			free(item->value);
+
 		free(item);
+
 	}
 	table->size = 0;
 	table->total = 0;
+	table->hashf = NULL;
+	table->storef = NULL;
+	table->cmpf = NULL;
+	table->freef = NULL;
+	
 	free(table->buckets);
 	table->buckets = NULL;
 	free(table);
+	table = NULL;
+
 }
 
 /* Add a new value to the hashtable.
@@ -279,11 +294,6 @@ void *hashiter_next_store(htiterator_td *iter)
 	return store;
 }
 
-/* get the current store value from iterator
- * 
- * This uses the pointer to the previous item because
- * the next() has already moved onto the next item
- */
 void *hashiter_current_store(htiterator_td *iter)
 {
 	if(iter->p == NULL)
@@ -343,4 +353,13 @@ void hashiter_rewind(htiterator_td *iter)
 	 * with minimal checks
 	 */
 	iter->b--;
+}
+
+void hashiter_free(htiterator_td *iter)
+{
+	iter->b = 0;
+	iter->p = NULL;
+	iter->i = NULL;
+	free(iter);
+	iter = NULL;
 }
