@@ -39,13 +39,13 @@ struct ht_iterator_stc {
 	htitem_td *p;
 };
 
-htitem_td *hashitem_get(htitem_td *, void *, size_t, int(*)(void*, void*, size_t));
-htitem_td *hashitem_append(htitem_td *list, void *value, size_t size);
-void *ht_add_val(unsigned int, void *, size_t, hashtable_td *, void*(*)(void*));
+static htitem_td *hashitem_get(htitem_td *, void *, size_t, int(*)(void*, void*, size_t));
+static htitem_td *hashitem_append(htitem_td *list, void *value, size_t size);
+static void *ht_add_val(unsigned int, void *, size_t, hashtable_td *, void*(*)(void*));
 
-void *ht_get_val(unsigned int, void *, size_t, hashtable_td *);
-void *ht_get_store(unsigned int, void *, size_t, hashtable_td *);
-void *ht_get_item(unsigned int, void *, size_t, hashtable_td *);
+static void *ht_get_val(unsigned int, void *, size_t, hashtable_td *);
+static void *ht_get_store(unsigned int, void *, size_t, hashtable_td *);
+static void *ht_get_item(unsigned int, void *, size_t, hashtable_td *);
 
 /* simple hash generation function for string
  */
