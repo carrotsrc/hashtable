@@ -2,8 +2,8 @@ Hash Table
 ----------
 
 Author: Charlie FG, carrotsrc.org
-Version: 0.2.1
-Modified: 2014/05/31
+Version: 0.2.2
+Modified: 2014/06/26
 
 This is a basic hash table unit and set of functions for working with table. Also included is an iterator for scanning through the hash table sequentually.
 The hash table can store anything.
@@ -28,6 +28,10 @@ It is possible to iterate over the hash table sequentually, and so in a loop, us
 
 Changelog
 ---------
+- Correct freeing of hashed items including value
+- Hash item free callback takes value that is hashed, as well as store as arguments
+- Made local unit scope functions static
+- Added iterator free function
 - Added an iterator
 - Fixed problem of btbucket_td not being in header file
 - Typedef names do not use reserved POSIX naming conventions
