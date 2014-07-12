@@ -2,8 +2,8 @@ Hash Table
 ----------
 
 Author: Charlie FG, carrotsrc.org
-Version: 0.2.2
-Modified: 2014/06/26
+Version: 0.2.3
+Modified: 2014/07/12
 
 This is a basic hash table unit and set of functions for working with table. Also included is an iterator for scanning through the hash table sequentually.
 The hash table can store anything.
@@ -24,6 +24,18 @@ Data is retrieved from the table by passing whatever was used to hash the key. S
 The hash table can handle any sort of data, it just needs to be told which functions to use in order to hash the type of data has been passed to it, how to compare that type of data for retrieval purposes, how to store any associated data and how to free any associated data. The associated data is the store and is not necessary.
 
 It is possible to iterate over the hash table sequentually, and so in a loop, using an iterator.
+
+
+The hash table has been tested on a body of text with about 1.1 million words, resulting in about 50k keys
+
+
+Building
+--------
+
+It design as a unit to slot into place but the object file can be compiled with:
+
+gcc --std=c99 -c hash_table.c -o hash_table.o
+
 
 
 Changelog
