@@ -13,13 +13,13 @@ Overview
 
 The hash table consists of a array of buckets. When an item is added to the table, it's value is hashed and that is used to calculate the index of the bucket
 
-A bucket can contain more than one item because sometimes there is an index collision from the hash; This is managed by a linked list in each bucket. Each item in the linked list has a store which is some data that is associated with the item's value. So for instance:
+A bucket can contain more than one item because sometimes there is an index collision from the hash; This is managed by a linked list in each bucket. Each item in the linked list has a key and a value which is some data that is associated with the item's key. So for instance:
 
 [ACF | 100]
 
-ACF is the value and 100 is the store, B is the value and 230 is the store associated. The store is not necessary and represents extra data; a data structure can be hashed and stored meaning no store is needed.
+ACF is the key and 100 is the value, B is the value and 230 is the store associated. The value is not necessary and represents extra data; a data structure can be hashed and stored meaning no store is needed.
 
-Data is retrieved from the table by passing whatever was used to hash the value. So in the above example get("ACF") is used to retrieve the associated 100.
+Data is retrieved from the table by passing whatever was used to hash the key. So in the above example get("ACF") is used to retrieve the associated 100.
 
 The hash table can handle any sort of data, it just needs to be told which functions to use in order to hash the type of data has been passed to it, how to compare that type of data for retrieval purposes, how to store any associated data and how to free any associated data. The associated data is the store and is not necessary.
 
@@ -28,6 +28,7 @@ It is possible to iterate over the hash table sequentually, and so in a loop, us
 
 Changelog
 ---------
+- Brought terminology more in line with conventional hash tables
 - Correct freeing of hashed items including value
 - Hash item free callback takes value that is hashed, as well as store as arguments
 - Made local unit scope functions static

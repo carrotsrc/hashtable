@@ -20,8 +20,8 @@
 
 typedef struct ht_list_stc htitem_td;
 struct ht_list_stc {
-	void *value;		// the item that is hashed
-	void *store;		// pointer to data that is indexed
+	void *key;		// the item that is hashed
+	void *value;		// pointer to data that is indexed
 	htitem_td *p;	// the previous list item
 	htitem_td *n;	// the next list item
 };
@@ -40,11 +40,11 @@ struct ht_iterator_stc {
 };
 
 static htitem_td *hashitem_get(htitem_td *, void *, size_t, int(*)(void*, void*, size_t));
-static htitem_td *hashitem_append(htitem_td *list, void *value, size_t size);
+static htitem_td *hashitem_append(htitem_td *list, void *key, size_t size);
 static void *ht_add_val(unsigned int, void *, size_t, hashtable_td *, void*(*)(void*));
 
 static void *ht_get_val(unsigned int, void *, size_t, hashtable_td *);
-static void *ht_get_store(unsigned int, void *, size_t, hashtable_td *);
+static void *ht_get_value(unsigned int, void *, size_t, hashtable_td *);
 static void *ht_get_item(unsigned int, void *, size_t, hashtable_td *);
 
 /* simple hash generation function for string
@@ -60,10 +60,10 @@ unsigned int hash_string(void *str)
 }
 
 /* simple native string comparison function */
-int compare_string(void *value, void *str, size_t size)
+int compare_string(void *key, void *str, size_t size)
 {
 	const char *s = (const char *)str;
-	const char *v = (const char *)value;
+	const char *v = (const char *)key;
 	while(*s)
 		if(*s++ != *v++)
 			return 1;
@@ -73,16 +73,16 @@ int compare_string(void *value, void *str, size_t size)
 
 /* retrieve an item from a bucket's list
  */
-htitem_td *hashitem_get(htitem_td *list, void *value, size_t size, int(cmpf)(void*, void*, size_t))
+htitem_td *hashitem_get(htitem_td *list, void *key, size_t size, int(cmpf)(void*, void*, size_t))
 {
 	while(list->n != NULL) {
-		if(cmpf(list->value, value, size) == 0)
+		if(cmpf(list->key, key, size) == 0)
 			return list;
 
 		list = list->n;
 	}
 
-	if(cmpf(list->value, value, size) == 0)
+	if(cmpf(list->key, key, size) == 0)
 		return list;
 
 	return NULL;
@@ -90,15 +90,15 @@ htitem_td *hashitem_get(htitem_td *list, void *value, size_t size, int(cmpf)(voi
 
 /* append an item to the end of a bucket's list
  */
-htitem_td *hashitem_append(htitem_td *list, void *value, size_t size)
+htitem_td *hashitem_append(htitem_td *list, void *key, size_t size)
 {
 	while(list->n != NULL)
 		list = list->n;
 
 	htitem_td *item = malloc(sizeof(htitem_td));
-	item->value = malloc(size);
-	memcpy(item->value, value, size);
-	item->store = NULL;
+	item->key = malloc(size);
+	memcpy(item->key, key, size);
+	item->value = NULL;
 	item->n = NULL;
 	item->p = list;
 	list->n = item;
@@ -107,7 +107,7 @@ htitem_td *hashitem_append(htitem_td *list, void *value, size_t size)
 
 /* generate a blank hash table of size specified. include the type functions
  */
-hashtable_td *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef)(void*, void*), int(*cmpf)(void*, void*, size_t),void*(*freef)(void*,void*))
+hashtable_td *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*valuef)(void*, void*), int(*cmpf)(void*, void*, size_t),void*(*freef)(void*,void*))
 {
 	hashtable_td *ht = malloc(sizeof(hashtable_td));
 	ht->size = size;
@@ -116,7 +116,7 @@ hashtable_td *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef
 	if(hashf == NULL)
 		hashf = &hash_string;
 	ht->hashf = hashf;
-	ht->storef = storef;
+	ht->valuef = valuef;
 	if(cmpf == NULL)
 		cmpf = &compare_string;
 
@@ -126,12 +126,15 @@ hashtable_td *gen_hashtable(int size, unsigned int(*hashf)(void*), void*(*storef
 }
 
 /* properly free the memory allocated for the hash table
- * including all the bucket lists and their values
+ * including all the bucket lists and their keys
  */
 void free_hashtable(hashtable_td *table)
 {
 	int sz = table->size;
-
+	#ifdef DEBUG_HASHTABLE
+	int f = 0;
+	printf("Hashtable: %d in %d buckets\t\t", table->total, sz);
+	#endif
 	for(int i = 0; i < sz; i++) {
 		if(table->buckets[i].occupied == 0x0)
 			continue;
@@ -139,26 +142,32 @@ void free_hashtable(hashtable_td *table)
 		htitem_td *item = table->buckets[i].content;
 		while(item->n != NULL) {
 			if(table->freef != NULL)
-				table->freef(item->value, item->store);
+				table->freef(item->key, item->value);
 			else
-				free(item->value);
+				free(item->key);
 
 			item = item->n;
 			free(item->p);
+			#ifdef DEBUG_HASHTABLE
+			++f;
+			#endif
 		}
 
 		if(table->freef != NULL)
-			table->freef(item->value, item->store);
+			table->freef(item->key, item->value);
 		else
-			free(item->value);
+			free(item->key);
 
 		free(item);
 
+		#ifdef DEBUG_HASHTABLE
+		++f;
+		#endif
 	}
 	table->size = 0;
 	table->total = 0;
 	table->hashf = NULL;
-	table->storef = NULL;
+	table->valuef = NULL;
 	table->cmpf = NULL;
 	table->freef = NULL;
 	
@@ -167,27 +176,31 @@ void free_hashtable(hashtable_td *table)
 	free(table);
 	table = NULL;
 
+	#ifdef DEBUG_HASHTABLE
+	printf("Freed: %d items\n", f);
+	f = 0;
+	#endif
 }
 
-/* Add a new value to the hashtable.
+/* Add a new key to the hashtable.
  * 
  * When an item is added to the hashtable, a callback function is run
  * to organise the data that the indexed item will be storing, which is
- * handed over to the *store field in the item's data structure
+ * handed over to the *value field in the item's data structure
  */
-void *hashtable_add(void *value, size_t size, hashtable_td *table)
+void *hashtable_add(void *key, size_t size, hashtable_td *table)
 {
-	unsigned int hash = table->hashf(value);
+	unsigned int hash = table->hashf(key);
 	unsigned int index = hash%(table->size);
 	htitem_td *item = NULL;
 
 	if(table->buckets[index].occupied == 0x0) {
 		/* the index is a clear bucket */
 		item = malloc(sizeof(htitem_td));
-		item->value = malloc(size);
-		memcpy(item->value, value, size);
-		if(table->storef != NULL)
-			item->store = table->storef(NULL, value); /* run the callback for new store type */
+		item->key = malloc(size);
+		memcpy(item->key, key, size);
+		if(table->valuef != NULL)
+			item->value = table->valuef(NULL, key); /* run the callback for new value type */
 
 		item->n = NULL;
 		item->p = NULL;
@@ -196,54 +209,54 @@ void *hashtable_add(void *value, size_t size, hashtable_td *table)
 		table->total++;
 	} else {
 		/* the index is a bucket with content */
-		if((item = hashitem_get(table->buckets[index].content, value, size, table->cmpf)) == NULL) {
-			item = hashitem_append(table->buckets[index].content, value, size);
+		if((item = hashitem_get(table->buckets[index].content, key, size, table->cmpf)) == NULL) {
+			item = hashitem_append(table->buckets[index].content, key, size);
 			table->total++;
 		}
 
-		item->store = table->storef(item->store, value); /* run the callback for store type */
+		item->value = table->valuef(item->value, key); /* run the callback for value type */
 	}
 
-	return item->store;
+	return item->value;
 }
 
-/* get a value's store from the hash table. If it exists then return
+/* get a key's value from the hash table. If it exists then return
  * a pointer to the item otherwise return NULL
  */
-void *hashtable_get_store(void *value, size_t size, hashtable_td *table)
+void *hashtable_get_value(void *key, size_t size, hashtable_td *table)
 {
-	unsigned int hash = table->hashf(value);
+	unsigned int hash = table->hashf(key);
 	htitem_td *item = NULL;
 
-	if((item = ht_get_item(hash, value, size, table)) == NULL)
-		return NULL;
-
-	return item->store;
-}
-
-/* get a value from the hash table. If it exists then return
- * a pointer to the value otherwise return NULL
- */
-void *hashtable_get_value(void *value, size_t size, hashtable_td *table)
-{
-	unsigned int hash = table->hashf(value);
-	htitem_td *item = NULL;
-
-	if((item = ht_get_item(hash, value, size, table)) == NULL)
+	if((item = ht_get_item(hash, key, size, table)) == NULL)
 		return NULL;
 
 	return item->value;
 }
 
+/* get a key from the hash table. If it exists then return
+ * a pointer to the key otherwise return NULL
+ */
+void *hashtable_get_key(void *key, size_t size, hashtable_td *table)
+{
+	unsigned int hash = table->hashf(key);
+	htitem_td *item = NULL;
+
+	if((item = ht_get_item(hash, key, size, table)) == NULL)
+		return NULL;
+
+	return item->key;
+}
+
 /* local scope function for retrieving an item */
-void *ht_get_item(unsigned int hash, void *value, size_t size, hashtable_td *table)
+void *ht_get_item(unsigned int hash, void *key, size_t size, hashtable_td *table)
 {
 	unsigned int index = hash%(table->size);
 	htitem_td *item = NULL;
 	if(table->buckets[index].occupied == 0x0)
 		return NULL;
 	
-	if(( item = hashitem_get(table->buckets[index].content, value, size, table->cmpf)) == NULL)
+	if(( item = hashitem_get(table->buckets[index].content, key, size, table->cmpf)) == NULL)
 		return NULL;
 	
 	return item;
@@ -268,43 +281,10 @@ htiterator_td *hashtable_iter(hashtable_td *table)
 	iter->b--;
 }
 
-/* get next store from iterator
+/* get next value from iterator
  *
  * this will set the current iterator item automatically
  * to the next one which is why ->p is used for reference
- */
-void *hashiter_next_store(htiterator_td *iter)
-{
-	void *store = NULL;
-	if(iter->i == NULL) {
-		iter->b++;
-		while(iter->table->buckets[iter->b].occupied == 0x0) {
-			iter->b++;
-			if(iter->b == iter->table->size)
-				return NULL;
-		}
-
-		iter->i = iter->table->buckets[iter->b].content;
-	}
-
-	store = iter->i->store;
-	iter->p = iter->i;	/* so we can just quickly roll back */
-	iter->i = iter->i->n;
-
-	return store;
-}
-
-void *hashiter_current_store(htiterator_td *iter)
-{
-	if(iter->p == NULL)
-		return NULL;
-
-	return iter->p->store;
-}
-
-/* get next value from iterator 
- *
- * Same as store function
  */
 void *hashiter_next_value(htiterator_td *iter)
 {
@@ -327,8 +307,41 @@ void *hashiter_next_value(htiterator_td *iter)
 	return value;
 }
 
-/* get the current value from the iterator */
 void *hashiter_current_value(htiterator_td *iter)
+{
+	if(iter->p == NULL)
+		return NULL;
+
+	return iter->p->value;
+}
+
+/* get next key from iterator 
+ *
+ * Same as value function
+ */
+void *hashiter_next_key(htiterator_td *iter)
+{
+	void *key = NULL;
+	if(iter->i == NULL) {
+		iter->b++;
+		while(iter->table->buckets[iter->b].occupied == 0x0) {
+			iter->b++;
+			if(iter->b == iter->table->size)
+				return NULL;
+		}
+
+		iter->i = iter->table->buckets[iter->b].content;
+	}
+
+	key = iter->i->key;
+	iter->p = iter->i;	/* so we can just quickly roll back */
+	iter->i = iter->i->n;
+
+	return key;
+}
+
+/* get the current key from the iterator */
+void *hashiter_current_key(htiterator_td *iter)
 {
 	if(iter->p == NULL)
 		return NULL;
@@ -336,7 +349,7 @@ void *hashiter_current_value(htiterator_td *iter)
 	/* the next() function has already rolled onto the next
 	 * item, so use ->p instead which is reference to previous
 	 */
-	return iter->p->value;
+	return iter->p->key;
 }
 
 void hashiter_rewind(htiterator_td *iter)

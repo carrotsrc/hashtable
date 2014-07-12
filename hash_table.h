@@ -32,8 +32,8 @@ struct hashtable_stc {
 	 * the rest can be NULL
 	 */
 	unsigned int(*hashf)(void*); /* the hashing function for the data type */
-	void*(*storef)(void*,void*); /* the function to call when storing data */
-	int(*cmpf)(void*, void*, size_t); /* comparison between given value and hashed value */
+	void*(*valuef)(void*,void*); /* the function to call when storing data */
+	int(*cmpf)(void*, void*, size_t); /* comparison between given key and hashed key */
 	void*(*freef)(void*,void*); /* freeing the data type */
 };
 
@@ -48,18 +48,18 @@ hashtable_td *gen_hashtable(	int size,
 
 void free_hashtable(hashtable_td *table);
 
-void *hashtable_add(void *value, size_t size, hashtable_td *table); /* add an item to the hash table */
+void *hashtable_add(void *key, size_t size, hashtable_td *table); /* add an item to the hash table */
 
-void *hashtable_get_value(void *, size_t, hashtable_td *); /* get an value store */
-void *hashtable_get_store(void *, size_t, hashtable_td *); /* get a value */
+void *hashtable_get_key(void *, size_t, hashtable_td *); /* get an key value */
+void *hashtable_get_value(void *, size_t, hashtable_td *); /* get a key */
 
 htiterator_td *hashtable_iter(hashtable_td*);
 
-void *hashiter_next_store(htiterator_td*);
-void *hashiter_current_store(htiterator_td*);
-
 void *hashiter_next_value(htiterator_td*);
 void *hashiter_current_value(htiterator_td*);
+
+void *hashiter_next_key(htiterator_td*);
+void *hashiter_current_key(htiterator_td*);
 
 void hashiter_rewind(htiterator_td*);
 void hashiter_free(htiterator_td*);
